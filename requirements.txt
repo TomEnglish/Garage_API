@@ -1,0 +1,7 @@
+flask
+Flask-SQLAlchemy
+Flask-Marshmallow
+SQLAlchemy
+marshmallow
+mysql-connector-python
+marshmallow-sqlalchemy
