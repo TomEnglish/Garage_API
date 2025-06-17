@@ -1,12 +1,13 @@
 
 from .schemas import customer_schema, customers_schema, login_schema
+from app.blueprints.service_tickets.schemas import servicetickets_schema
 from flask import request, jsonify
 from sqlalchemy import select
 from marshmallow import ValidationError
-from app.models import Customer, db
+from app.models import Customer, ServiceTickets, db
 from . import customers_db
 from app.extensions import limiter, cache
-from app.utils.util import encode_token
+from app.utils.util import encode_token, token_required
 
 
 @customers_db.route("/login", methods=['POST'])
@@ -33,7 +34,7 @@ def login():
         return jsonify(response), 200
     else:
         return jsonify({'messages': "Invalid email or password"}), 401 
-
+    
 
 @customers_db.route("/", methods=['POST'])
 @limiter.limit("3 per hour") #Rate limiting a post/create makes sense because we woud not expect a fast rate of customer additions
@@ -93,6 +94,7 @@ def update_customer(customer_id):
 
 #DELETE SPECIFIC MEMBER
 @customers_db.route("/<int:customer_id>", methods=['DELETE'])
+@token_required
 def delete_customer(customer_id):
     customer = db.session.get(Customer, customer_id)
 
@@ -102,3 +104,14 @@ def delete_customer(customer_id):
     db.session.delete(customer)
     db.session.commit()
     return jsonify({"message": f'Customer id: {customer_id}, successfully deleted.'}), 200
+
+
+@customers_db.route("/my-tickets", methods=['GET'])
+@token_required
+def get_my_tickets(current_customer_id):
+    customer = db.session.get(Customer, int(current_customer_id))
+    if customer:
+        tickets = customer.tickets
+        return servicetickets_schema.jsonify(tickets), 200
+    else:
+        return jsonify({"message": "Customer not found"}), 404

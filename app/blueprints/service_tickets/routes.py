@@ -7,6 +7,7 @@ from .schemas import servicetickets_schema, serviceticket_schema
 from app.extensions import limiter, cache
 
 
+
 # POST '/': Pass in all the required information to create the service_ticket.
 @tickets_db.route("/", methods=['POST'])
 @limiter.limit("3/hour") #how many mechanics per day or hour would be reasonabe...not too many
@@ -76,3 +77,4 @@ def get_all_servicetickets():
     tickets = db.session.execute(query).scalars().all()
 
     return servicetickets_schema.jsonify(tickets), 200
+
