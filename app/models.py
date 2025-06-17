@@ -33,6 +33,7 @@ class Customer(Base):
     name: Mapped[str] = mapped_column(db.String(225),nullable=False)
     email: Mapped[str] = mapped_column(db.String(360),nullable=False,unique=True)
     phone: Mapped[str] = mapped_column(db.String(20), unique=True)
+    password: Mapped[str] = mapped_column(db.String(225),nullable=False)
 
     tickets: Mapped[List['ServiceTickets']] = db.relationship(back_populates='customer')
     
@@ -62,6 +63,13 @@ class Mechanics(Base):
     service_tickets: Mapped[List['ServiceTickets']] = db.relationship(secondary='service_mechanics', back_populates='mechanics')
 
 
+class User(Base):
+    __tablename__ = 'users'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(db.String(225),nullable=False)
+    email: Mapped[str] = mapped_column(db.String(360),nullable=False,unique=True)
+    phone: Mapped[str] = mapped_column(db.String(20), unique=True)
 
 
 # For practice, further extend the models you created for your mechanic shop API. 

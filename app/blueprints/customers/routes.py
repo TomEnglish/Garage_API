@@ -1,13 +1,44 @@
 
-from .schemas import customer_schema, customers_schema
+from .schemas import customer_schema, customers_schema, login_schema
 from flask import request, jsonify
 from sqlalchemy import select
 from marshmallow import ValidationError
 from app.models import Customer, db
 from . import customers_db
+from app.extensions import limiter, cache
+from app.utils.util import encode_token
+
+
+@customers_db.route("/login", methods=['POST'])
+def login():
+    try:
+        credentials = request.json
+        username = credentials['email']
+        password = credentials['password']
+    except KeyError:
+        return jsonify({'messages': 'Invalid payload, expecting username and password'}), 400
+    
+    query = select(Customer).where(Customer.email == username)
+    customer = db.session.execute(query).scalar_one_or_none() 
+
+    if customer and customer.password == password:  # if we have a user associated with the username, validate the password
+        auth_token = encode_token(customer.id)
+    
+        response = {
+            "status": "success",
+            "message": "Successfully Logged In",
+            "auth_token": auth_token
+        }
+
+        return jsonify(response), 200
+    else:
+        return jsonify({'messages': "Invalid email or password"}), 401 
 
 
 @customers_db.route("/", methods=['POST'])
+@limiter.limit("3 per hour") #Rate limiting a post/create makes sense because we woud not expect a fast rate of customer additions
+#possibly something like transactions but not customers.
+@cache.cached(timeout=60) 
 def create_customer():
     try:
         customer_data = customer_schema.load(request.json)
@@ -25,6 +56,7 @@ def create_customer():
     return customer_schema.jsonify(new_customer), 201
 
 @customers_db.route("/", methods=['GET'])
+@cache.cached(timeout=60) #Caching a customer GET likely makes sense because it would be a frequent query and likey users woud not need upto the second accuracy
 def get_customers():
     query = select(Customer)
     customers = db.session.execute(query).scalars().all()

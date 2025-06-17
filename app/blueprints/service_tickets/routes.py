@@ -4,10 +4,12 @@ from sqlalchemy import select
 from marshmallow import ValidationError
 from app.models import ServiceTickets, Mechanics, db
 from .schemas import servicetickets_schema, serviceticket_schema
+from app.extensions import limiter, cache
 
 
 # POST '/': Pass in all the required information to create the service_ticket.
 @tickets_db.route("/", methods=['POST'])
+@limiter.limit("3/hour") #how many mechanics per day or hour would be reasonabe...not too many
 def create_ticket():
     try:
         ticket_data = serviceticket_schema.load(request.json)
@@ -28,7 +30,7 @@ def create_ticket():
 
 # PUT '/<ticket_id>/assign-mechanic/<mechanic-id>: Adds a relationship between a service ticket and the mechanics. (Reminder: use your relationship attributes! They allow you the treat the relationship like a list, able to append a Mechanic to the mechanics list).
 @tickets_db.route("/<ticket_id>/assign-mechanic/<mechanic_id>", methods=['PUT'])
-def assign_mechanic(ticket_id,mechanic_id):
+def assign_mechanic(ticket_id, mechanic_id):
     ticket = db.session.get(ServiceTickets, ticket_id)
     mechanic = db.session.get(Mechanics, mechanic_id)
 
@@ -65,7 +67,9 @@ def remove_mechanic(ticket_id, mechanic_id):
     return jsonify(message=message, ticket=serialized_ticket), 200
 
 # GET '/': Retrieves all service tickets.
+
 @tickets_db.route('/', methods=['GET'])
+@cache.cached(timeout=60)#A Get of ALl tickets is ikey something like a dashboard would pull from frequently
 def get_all_servicetickets():
     query = select(ServiceTickets)
     

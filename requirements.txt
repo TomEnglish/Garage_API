@@ -5,3 +5,6 @@ SQLAlchemy
 marshmallow
 mysql-connector-python
 marshmallow-sqlalchemy
+Flask-Limiter
+Flask-Caching
+python-jose

@@ -6,7 +6,6 @@ from app.models import Mechanics, db
 from .schemas import mechanic_schema, mechanics_schema
 
 
-
 @mechanics_db.route("/", methods=['POST'])
 def create_mechanic():
     try:
