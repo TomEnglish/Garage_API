@@ -12,13 +12,6 @@ db = SQLAlchemy(model_class = Base)
 
 
 
-# customers, service_tickets, service_mechanics, mechanics
-# cust: id, name, email, phone
-# st: id, VIN, serv_date, serv_desc, cust_id
-# sm: ticket_id, mechanic_id
-# mech: id, name, phone, email, salary
-#cust_id->cust_id // st_id-> ticket_id // mech_id <- mech_id
-
 service_mechanics = db.Table(
     'service_mechanics',
     Base.metadata,

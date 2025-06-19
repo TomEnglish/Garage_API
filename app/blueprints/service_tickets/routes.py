@@ -3,14 +3,14 @@ from flask import request, jsonify
 from sqlalchemy import select
 from marshmallow import ValidationError
 from app.models import ServiceTickets, Mechanics, db
-from .schemas import servicetickets_schema, serviceticket_schema
+from .schemas import servicetickets_schema, serviceticket_schema, edit_service_ticket_schema
 from app.extensions import limiter, cache
 
 
 
 # POST '/': Pass in all the required information to create the service_ticket.
 @tickets_db.route("/", methods=['POST'])
-@limiter.limit("3/hour") #how many mechanics per day or hour would be reasonabe...not too many
+#@limiter.limit("20/hour") #how many mechanics per day or hour would be reasonabe...not too many
 def create_ticket():
     try:
         ticket_data = serviceticket_schema.load(request.json)
@@ -48,29 +48,10 @@ def assign_mechanic(ticket_id, mechanic_id):
     return jsonify(message=message, ticket=serialized_ticket), 200
  
 
-
-# PUT '/<ticket_id>/remove-mechanic/<mechanic-id>: Removes the relationship from the service ticket and the mechanic.
-@tickets_db.route("/<ticket_id>/remove-mechanic/<mechanic_id>", methods=['PUT'])
-def remove_mechanic(ticket_id, mechanic_id):
-    ticket = db.session.get(ServiceTickets, ticket_id)
-    mechanic = db.session.get(Mechanics, mechanic_id)
-
-    if not ticket:
-        return jsonify({"error": "Ticket not found."}), 404
-    
-    if not mechanic:
-        return jsonify({"error": "Mechanic not found."}), 404
-    
-    ticket.mechanics.remove(mechanic)
-    db.session.commit()
-    serialized_ticket = serviceticket_schema.dump(ticket)
-    message = f"Mechanic {mechanic.name} (ID: {mechanic.id}) removed from Ticket ID: {ticket.id}"
-    return jsonify(message=message, ticket=serialized_ticket), 200
-
 # GET '/': Retrieves all service tickets.
 
 @tickets_db.route('/', methods=['GET'])
-@cache.cached(timeout=60)#A Get of ALl tickets is ikey something like a dashboard would pull from frequently
+#@cache.cached(timeout=60)#A Get of ALl tickets is ikey something like a dashboard would pull from frequently
 def get_all_servicetickets():
     query = select(ServiceTickets)
     
@@ -78,3 +59,34 @@ def get_all_servicetickets():
 
     return servicetickets_schema.jsonify(tickets), 200
 
+ 
+ # PUT '/<int:ticket_id>/edit' : Takes in remove_ids, and add_ids
+# Use id's to look up the mechanic to append or remove them from the ticket.mechanics list
+@tickets_db.route("/<int:ticket_id>/edit/", methods=['PUT'])
+def edit_mechanic(ticket_id):
+    ticket = db.session.get(ServiceTickets, ticket_id)
+
+    try:
+        ticket_updates = edit_service_ticket_schema.load(request.json)
+    except ValidationError as e:
+        return jsonify(e.messages), 400
+    
+    query = select(ServiceTickets).where(ServiceTickets.id == ticket_id)
+    result = db.session.execute(query).scalars().first()
+    
+    for mechanic_id in ticket_updates["add_mechanic_ids"]:
+        query = select(Mechanics).where(Mechanics.id == mechanic_id)
+        mechanic = db.session.execute(query).scalars().first()
+
+        if mechanic and mechanic not in result.mechanics:
+            result.mechanics.append(mechanic)
+
+    for mechanic_id in ticket_updates["remove_mechanic_ids"]:
+        query = select(Mechanics).where(Mechanics.id == mechanic_id)
+        mechanic = db.session.execute(query).scalars().first()
+
+        if mechanic and mechanic not in result.mechanics:
+            result.mechanics.remove(mechanic)
+
+    db.session.commit()
+    return serviceticket_schema.jsonify(result), 200

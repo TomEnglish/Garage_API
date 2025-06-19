@@ -1,4 +1,3 @@
-
 from .schemas import customer_schema, customers_schema, login_schema
 from app.blueprints.service_tickets.schemas import servicetickets_schema
 from flask import request, jsonify
@@ -37,7 +36,7 @@ def login():
     
 
 @customers_db.route("/", methods=['POST'])
-@limiter.limit("3 per hour") #Rate limiting a post/create makes sense because we woud not expect a fast rate of customer additions
+@limiter.limit("30 per hour") #Rate limiting a post/create makes sense because we woud not expect a fast rate of customer additions
 #possibly something like transactions but not customers.
 @cache.cached(timeout=60) 
 def create_customer():
@@ -57,7 +56,7 @@ def create_customer():
     return customer_schema.jsonify(new_customer), 201
 
 @customers_db.route("/", methods=['GET'])
-@cache.cached(timeout=60) #Caching a customer GET likely makes sense because it would be a frequent query and likey users woud not need upto the second accuracy
+#@cache.cached(timeout=60) #Caching a customer GET likely makes sense because it would be a frequent query and likey users woud not need upto the second accuracy
 def get_customers():
     query = select(Customer)
     customers = db.session.execute(query).scalars().all()
@@ -107,7 +106,7 @@ def delete_customer(customer_id):
 
 
 @customers_db.route("/my-tickets", methods=['GET'])
-@token_required
+#@token_required
 def get_my_tickets(current_customer_id):
     customer = db.session.get(Customer, int(current_customer_id))
     if customer:

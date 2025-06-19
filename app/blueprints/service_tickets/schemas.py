@@ -1,7 +1,7 @@
 from marshmallow import fields
 from app.extensions import ma
 from app.models import ServiceTickets
-
+import re
 
 #SCHEMAS
 class ServiceTicketsSchema(ma.SQLAlchemyAutoSchema):
@@ -12,3 +12,16 @@ class ServiceTicketsSchema(ma.SQLAlchemyAutoSchema):
     
 serviceticket_schema = ServiceTicketsSchema()
 servicetickets_schema = ServiceTicketsSchema(many=True) 
+
+class EditServiceTicketsSchema(ma.Schema):
+
+    remove_mechanic_ids = fields.List(fields.Integer(), required=True)
+
+    add_mechanic_ids = fields.List(fields.Integer(), required=True)
+
+    class Meta:
+
+        fields = ("remove_mechanic_ids", "add_mechanic_ids")
+
+
+edit_service_ticket_schema = EditServiceTicketsSchema()
