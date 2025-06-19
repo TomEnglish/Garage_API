@@ -36,9 +36,9 @@ def login():
     
 
 @customers_db.route("/", methods=['POST'])
-@limiter.limit("30 per hour") #Rate limiting a post/create makes sense because we woud not expect a fast rate of customer additions
+#@limiter.limit("30 per hour") #Rate limiting a post/create makes sense because we woud not expect a fast rate of customer additions
 #possibly something like transactions but not customers.
-@cache.cached(timeout=60) 
+#@cache.cached(timeout=60) 
 def create_customer():
     try:
         customer_data = customer_schema.load(request.json)
@@ -58,10 +58,17 @@ def create_customer():
 @customers_db.route("/", methods=['GET'])
 #@cache.cached(timeout=60) #Caching a customer GET likely makes sense because it would be a frequent query and likey users woud not need upto the second accuracy
 def get_customers():
-    query = select(Customer)
-    customers = db.session.execute(query).scalars().all()
-
-    return customers_schema.jsonify(customers)
+    try:
+        page = int(request.args.get('page'))
+        per_page = int(request.args.get('per_page'))
+        query = select(Customer)
+        result = db.paginate(query, page=page, per_page=per_page)
+        return customers_schema.jsonify(result), 200
+    except:
+        query = select(Customer)
+        customers = db.session.execute(query).scalars().all()
+        return customers_schema.jsonify(customers)
+    
 
 @customers_db.route("/<int:customer_id>", methods=['GET'])
 def get_customer(customer_id):
@@ -93,7 +100,7 @@ def update_customer(customer_id):
 
 #DELETE SPECIFIC MEMBER
 @customers_db.route("/<int:customer_id>", methods=['DELETE'])
-@token_required
+#@token_required
 def delete_customer(customer_id):
     customer = db.session.get(Customer, customer_id)
 

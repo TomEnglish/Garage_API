@@ -31,8 +31,18 @@ def get_mechanics_list():
     # Placeholder: return actual data
     
     mechanics = db.session.execute(query).scalars().all()
+    return mechanics_schema.jsonify(mechanics), 200
+
+@mechanics_db.route('/volume/', methods=['GET'])
+def get_mechanics_list_by_work_vol():
+    query = select(Mechanics)
+    # Placeholder: return actual data
+    
+    mechanics = db.session.execute(query).scalars().all()
+    mechanics.sort(key=lambda mechanics:len(mechanics.service_tickets), reverse=True)
 
     return mechanics_schema.jsonify(mechanics), 200
+
 
 #UPDATE SPECIFIC EMPLOYEE/MECHANIC
 @mechanics_db.route("/<int:mechanic_id>", methods=['PUT'])
