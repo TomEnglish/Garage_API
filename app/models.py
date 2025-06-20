@@ -19,6 +19,25 @@ service_mechanics = db.Table(
     db.Column('mechanic_id', db.Integer, db.ForeignKey('mechanics.id'), primary_key=True)
 )
 
+# service_inventory = db.Table(
+#     'service_inventory',
+#     Base.metadata,
+#     db.Column('service_ticket_id', db.Integer, db.ForeignKey('service_tickets.id'), primary_key=True),
+#     db.Column('inventory_id', db.Integer, db.ForeignKey('inventory.id'), primary_key=True)
+# )
+
+class ServiceInventory(Base):
+    __tablename__ = 'service_inventory'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    service_ticket_id: Mapped[int] = mapped_column(db.ForeignKey("service_tickets.id"), nullable=False)
+    inventory_id: Mapped[int] = mapped_column(db.ForeignKey("inventory.id"), nullable=False)
+    quantity: Mapped[int] = mapped_column(nullable=False,)
+
+    inventory: Mapped["Inventory"] = db.relationship(back_populates="service_tickets")
+    service_tickets: Mapped["ServiceTickets"] = db.relationship(back_populates="inventory")
+
+
 class Customer(Base):
     __tablename__ = 'customers'
 
@@ -43,6 +62,7 @@ class ServiceTickets(Base):
 
     customer: Mapped[Customer] = db.relationship(back_populates='tickets')
     mechanics: Mapped[List['Mechanics']] = db.relationship(secondary='service_mechanics', back_populates='service_tickets')
+    inventory: Mapped[List['ServiceInventory']] = db.relationship(back_populates='service_tickets')
 
 class Mechanics(Base):
     __tablename__ = 'mechanics'
@@ -62,11 +82,16 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(db.String(225),nullable=False)
     email: Mapped[str] = mapped_column(db.String(360),nullable=False,unique=True)
-    phone: Mapped[str] = mapped_column(db.String(20), unique=True)
+    phone: Mapped[float] = mapped_column(db.Numeric(10,2), unique=True)
 
 
-# For practice, further extend the models you created for your mechanic shop API. 
-# Create a schema for your Customer model, and routes to accomplish all four CRUD 
-# operations to Create, Read, Update, and 
-# Delete customers similar to how Dylan added CRUD for the Library members in the above videos.
-# qwAnd don't forget to test each endpoint as you go
+class Inventory(Base):
+    __tablename__ = 'inventory'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(db.String(225),nullable=False)
+    price: Mapped[float] = mapped_column(db.Numeric(10,2),nullable=False)
+
+    service_tickets: Mapped[List['ServiceInventory']] = db.relationship(back_populates='inventory')
+    
+

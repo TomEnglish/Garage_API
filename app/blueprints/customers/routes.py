@@ -34,6 +34,32 @@ def login():
     else:
         return jsonify({'messages': "Invalid email or password"}), 401 
     
+@customers_db.route("/login_id/<int:customer_id>", methods=['POST'])
+def login_by_id(customer_id):
+
+    try:
+        credentials = request.json
+        id = customer_id
+        password = credentials['password']
+    except KeyError:
+        return jsonify({'messages': 'Invalid payload, expecting username and password'}), 400
+    
+    query = select(Customer).where(Customer.id == id)
+    customer = db.session.execute(query).scalar_one_or_none() 
+
+    if customer and customer.password == password:  # if we have a user associated with the username, validate the password
+        auth_token = encode_token(customer.id)
+    
+        response = {
+            "status": "success",
+            "message": "Successfully Logged In",
+            "auth_token": auth_token
+        }
+
+        return jsonify({"message": f'Customer id: {customer_id}:'},response), 200
+    else:
+        return jsonify({'messages': "Invalid id or password"}), 401 
+    
 
 @customers_db.route("/", methods=['POST'])
 #@limiter.limit("30 per hour") #Rate limiting a post/create makes sense because we woud not expect a fast rate of customer additions
@@ -56,7 +82,7 @@ def create_customer():
     return customer_schema.jsonify(new_customer), 201
 
 @customers_db.route("/", methods=['GET'])
-#@cache.cached(timeout=60) #Caching a customer GET likely makes sense because it would be a frequent query and likey users woud not need upto the second accuracy
+@cache.cached(timeout=60) #Caching a customer GET likely makes sense because it would be a frequent query and likey users woud not need upto the second accuracy
 def get_customers():
     try:
         page = int(request.args.get('page'))
@@ -77,6 +103,7 @@ def get_customer(customer_id):
     if customer:
         return customer_schema.jsonify(customer), 200
     return jsonify({"error":"Customer Not Found."}), 404
+
 
 #UPDATE SPECIFIC USER
 @customers_db.route("/<int:customer_id>", methods=['PUT'])
@@ -100,7 +127,7 @@ def update_customer(customer_id):
 
 #DELETE SPECIFIC MEMBER
 @customers_db.route("/<int:customer_id>", methods=['DELETE'])
-#@token_required
+@token_required
 def delete_customer(customer_id):
     customer = db.session.get(Customer, customer_id)
 
@@ -113,7 +140,7 @@ def delete_customer(customer_id):
 
 
 @customers_db.route("/my-tickets", methods=['GET'])
-#@token_required
+@token_required
 def get_my_tickets(current_customer_id):
     customer = db.session.get(Customer, int(current_customer_id))
     if customer:

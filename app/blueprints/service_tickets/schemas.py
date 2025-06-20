@@ -1,4 +1,4 @@
-from marshmallow import fields
+from marshmallow import fields, validate
 from app.extensions import ma
 from app.models import ServiceTickets
 import re
@@ -25,3 +25,23 @@ class EditServiceTicketsSchema(ma.Schema):
 
 
 edit_service_ticket_schema = EditServiceTicketsSchema()
+
+class InventoryItemQuantitySchema(ma.Schema):
+    inventory_id = fields.Integer(required=True)
+    quantity = fields.Integer(required=True, validate=validate.Range(min=1))
+
+class EditServiceTicketsInventorySchema(ma.Schema):
+    items_to_add_or_update = fields.List(
+        fields.Nested(InventoryItemQuantitySchema),
+        required=False # Allow requests that only remove items
+    )
+    remove_inventory_ids = fields.List(
+        fields.Integer(),
+        required=False # Allow requests that only add/update items
+    )
+
+    class Meta:
+        # Ensure at least one operation is specified if needed, or handle empty requests in the route
+        fields = ("items_to_add_or_update", "remove_inventory_ids")
+
+edit_service_ticket_inventory_schema = EditServiceTicketsInventorySchema()

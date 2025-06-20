@@ -2,8 +2,9 @@ from . import tickets_db
 from flask import request, jsonify
 from sqlalchemy import select
 from marshmallow import ValidationError
-from app.models import ServiceTickets, Mechanics, db
-from .schemas import servicetickets_schema, serviceticket_schema, edit_service_ticket_schema
+from app.models import ServiceTickets, Mechanics, Inventory, ServiceInventory, db
+from .schemas import servicetickets_schema, serviceticket_schema
+from .schemas import edit_service_ticket_schema, edit_service_ticket_inventory_schema
 from app.extensions import limiter, cache
 
 
@@ -64,14 +65,14 @@ def get_all_servicetickets():
 # Use id's to look up the mechanic to append or remove them from the ticket.mechanics list
 @tickets_db.route("/<int:ticket_id>/edit/", methods=['PUT'])
 def edit_mechanic(ticket_id):
-    ticket = db.session.get(ServiceTickets, ticket_id)
 
     try:
         ticket_updates = edit_service_ticket_schema.load(request.json)
     except ValidationError as e:
         return jsonify(e.messages), 400
     
-    query = select(ServiceTickets).where(ServiceTickets.id == ticket_id)
+    query = select(ServiceTickets).where(ServiceTickets.id == ticket_id) # Corrected line
+
     result = db.session.execute(query).scalars().first()
     
     for mechanic_id in ticket_updates["add_mechanic_ids"]:
@@ -90,3 +91,66 @@ def edit_mechanic(ticket_id):
 
     db.session.commit()
     return serviceticket_schema.jsonify(result), 200
+
+
+#add a single part to an existing Service Ticket.
+@tickets_db.route("/<int:ticket_id>/edit_inventory/", methods=['PUT'])
+def edit_inventory(ticket_id):
+
+    try:
+        ticket_updates = edit_service_ticket_inventory_schema.load(request.json)
+    except ValidationError as e:
+        return jsonify(e.messages), 400
+
+ 
+    service_ticket = db.session.get(ServiceTickets, ticket_id)
+
+    if not service_ticket:
+        return jsonify({"error": "Service ticket not found"}), 404
+    
+    # Add or update inventory items
+    for item_data in ticket_updates.get("items_to_add_or_update", []):
+        inventory_id = item_data.get("inventory_id")
+        quantity = item_data.get("quantity")
+
+        if inventory_id is None or quantity is None:
+            continue
+
+        inventory_item = db.session.get(Inventory, inventory_id)
+        if inventory_item:
+            existing_si_item = db.session.execute(
+                select(ServiceInventory).where(
+                    ServiceInventory.service_ticket_id == service_ticket.id,
+                    ServiceInventory.inventory_id == inventory_item.id
+                )
+            ).scalars().first()
+
+            if existing_si_item:
+                # Update quantity if item already associated
+                existing_si_item.quantity = quantity
+            else:
+                # Add new association with specified quantity
+                new_service_inventory = ServiceInventory(
+                    service_ticket_id=service_ticket.id,
+                    inventory_id=inventory_item.id,
+                    quantity=quantity
+                )
+                db.session.add(new_service_inventory)
+
+    # Remove inventory items
+    for inventory_id in ticket_updates.get("remove_inventory_ids", []):
+        service_inventory_to_remove = db.session.execute(
+            select(ServiceInventory).where(
+                ServiceInventory.service_ticket_id == service_ticket.id,
+                ServiceInventory.inventory_id == inventory_id
+            )
+        ).scalars().first()
+        
+        if service_inventory_to_remove:
+            db.session.delete(service_inventory_to_remove)
+
+
+    db.session.commit()
+   
+    updated_ticket = db.session.get(ServiceTickets, ticket_id)
+    return serviceticket_schema.jsonify(updated_ticket), 200

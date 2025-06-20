@@ -4,6 +4,7 @@ from .models import db
 from .blueprints.customers import customers_db
 from .blueprints.mechanics import mechanics_db
 from .blueprints.service_tickets import tickets_db
+from .blueprints.inventory import inventory_db
 
 
 
@@ -28,6 +29,7 @@ def create_app(config_name):
     app.register_blueprint(customers_db, url_prefix='/customers')
     app.register_blueprint(mechanics_db, url_prefix='/mechanics')
     app.register_blueprint(tickets_db, url_prefix='/tickets')
+    app.register_blueprint(inventory_db, url_prefix='/inventory')
    
  
 

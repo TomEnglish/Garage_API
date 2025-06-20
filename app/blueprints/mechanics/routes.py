@@ -4,9 +4,11 @@ from sqlalchemy import select
 from marshmallow import ValidationError
 from app.models import Mechanics, db
 from .schemas import mechanic_schema, mechanics_schema
+from app.utils.util import encode_mec_token, mec_token_required
 
 
 @mechanics_db.route("/", methods=['POST'])
+@mec_token_required
 def create_mechanic():
     try:
         mechanic_data = mechanic_schema.load(request.json)
@@ -46,6 +48,7 @@ def get_mechanics_list_by_work_vol():
 
 #UPDATE SPECIFIC EMPLOYEE/MECHANIC
 @mechanics_db.route("/<int:mechanic_id>", methods=['PUT'])
+@mec_token_required
 def update_mechanic(mechanic_id):
     mechanic = db.session.get(Mechanics, mechanic_id)
 
@@ -65,6 +68,7 @@ def update_mechanic(mechanic_id):
 
 #DELETE SPECIFIC MEMBER
 @mechanics_db.route("/<int:mechanic_id>", methods=['DELETE'])
+@mec_token_required
 def delete_mechanic(mechanic_id):
     mechanic = db.session.get(Mechanics, mechanic_id)
 
