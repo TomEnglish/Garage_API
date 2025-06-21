@@ -11,7 +11,7 @@ from app.extensions import limiter, cache
 
 # POST '/': Pass in all the required information to create the service_ticket.
 @tickets_db.route("/", methods=['POST'])
-#@limiter.limit("20/hour") #how many mechanics per day or hour would be reasonabe...not too many
+@limiter.limit("20/hour") #how many tickets per day or hour would be reasonabe...not too many
 def create_ticket():
     try:
         ticket_data = serviceticket_schema.load(request.json)
@@ -52,7 +52,7 @@ def assign_mechanic(ticket_id, mechanic_id):
 # GET '/': Retrieves all service tickets.
 
 @tickets_db.route('/', methods=['GET'])
-#@cache.cached(timeout=60)#A Get of ALl tickets is ikey something like a dashboard would pull from frequently
+@cache.cached(timeout=60)#A Get of ALl tickets is ikey something like a dashboard would pull from frequently
 def get_all_servicetickets():
     query = select(ServiceTickets)
     

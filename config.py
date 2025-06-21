@@ -1,7 +1,7 @@
 
 
 class DevelopmentConfig:
-    SQLALCHEMY_DATABASE_URI = 'mysql+mysqlconnector://root:MYPASSWORD123@localhost/garage_db'
+    SQLALCHEMY_DATABASE_URI = 'mysql+mysqlconnector://root:Leonidas7&@localhost/garage_db'
     DEBUG = True
 
 class TestingConfig:

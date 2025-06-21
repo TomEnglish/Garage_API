@@ -62,9 +62,9 @@ def login_by_id(customer_id):
     
 
 @customers_db.route("/", methods=['POST'])
-#@limiter.limit("30 per hour") #Rate limiting a post/create makes sense because we woud not expect a fast rate of customer additions
+@limiter.limit("30 per hour") #Rate limiting a post/create makes sense because we woud not expect a fast rate of customer additions
 #possibly something like transactions but not customers.
-#@cache.cached(timeout=60) 
+@cache.cached(timeout=60) 
 def create_customer():
     try:
         customer_data = customer_schema.load(request.json)
@@ -128,15 +128,47 @@ def update_customer(customer_id):
 #DELETE SPECIFIC MEMBER
 @customers_db.route("/<int:customer_id>", methods=['DELETE'])
 @token_required
-def delete_customer(customer_id):
-    customer = db.session.get(Customer, customer_id)
+def delete_customer(current_customer_id_from_token, customer_id):
+    DEFAULT_CUSTOMER_ID = 1 # Define the ID of your default customer
 
-    if not customer:
+    try:
+        target_customer_id = int(customer_id)
+    except ValueError:
+        return jsonify({"error": "Invalid customer ID format in URL."}), 400
+
+    if target_customer_id == DEFAULT_CUSTOMER_ID:
+        return jsonify({"error": "Cannot delete the default customer account."}), 403
+
+    customer_to_delete = db.session.get(Customer, target_customer_id)
+
+    if not customer_to_delete:
         return jsonify({"error": "Customer not found."}), 404
+
+    # Check if the default customer exists
+    default_customer = db.session.get(Customer, DEFAULT_CUSTOMER_ID)
+    if not default_customer:
+        # This is a critical configuration issue.
+        # Log this error and inform the admin.
+        # For now, prevent deletion to avoid data integrity issues.
+        print(f"CRITICAL ERROR: Default customer with ID {DEFAULT_CUSTOMER_ID} not found. Aborting deletion of customer {target_customer_id}.")
+        return jsonify({"error": "System configuration error: Default customer not found. Please contact support."}), 500
+
+    # Reassign tickets to the default customer
+    # Ensure tickets are loaded if they are lazy-loaded
+    if customer_to_delete.tickets: # Check if there are any tickets
+        for ticket in list(customer_to_delete.tickets): # Iterate over a copy if modifying the collection
+            # ticket.customer_id = DEFAULT_CUSTOMER_ID # Keep this if direct FK assignment is preferred by some style
+            ticket.customer = default_customer # Assign the actual customer object
+            db.session.add(ticket) # Mark ticket as changed
     
-    db.session.delete(customer)
+    # Flush the changes to service tickets (UPDATE statements) before deleting the customer
+    db.session.flush()
+
+    # Now, delete the customer
+    db.session.delete(customer_to_delete)
     db.session.commit()
-    return jsonify({"message": f'Customer id: {customer_id}, successfully deleted.'}), 200
+    
+    return jsonify({"message": f'Customer id: {target_customer_id} successfully deleted by user {current_customer_id_from_token}. Tickets reassigned to default customer (ID: {DEFAULT_CUSTOMER_ID}).'}), 200
 
 
 @customers_db.route("/my-tickets", methods=['GET'])

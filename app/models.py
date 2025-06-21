@@ -58,9 +58,9 @@ class ServiceTickets(Base):
     vin: Mapped[str] = mapped_column(db.String(30), nullable=False, unique=True)
     service_date: Mapped[date] = mapped_column(db.Date)
     service_desc: Mapped[str] = mapped_column(db.String(300))
-    customer_id: Mapped[int] = mapped_column(db.ForeignKey('customers.id'))
+    customer_id: Mapped[int] = mapped_column(db.ForeignKey('customers.id'), nullable=False)
 
-    customer: Mapped[Customer] = db.relationship(back_populates='tickets')
+    customer: Mapped[Customer] = db.relationship(back_populates='tickets', passive_deletes=True)
     mechanics: Mapped[List['Mechanics']] = db.relationship(secondary='service_mechanics', back_populates='service_tickets')
     inventory: Mapped[List['ServiceInventory']] = db.relationship(back_populates='service_tickets')
 
@@ -72,6 +72,7 @@ class Mechanics(Base):
     email: Mapped[str] = mapped_column(db.String(360),nullable=False,unique=True)
     phone: Mapped[str] = mapped_column(db.String(20), unique=True)
     salary: Mapped[float] = mapped_column(db.Numeric(10,2), nullable=False)
+    password: Mapped[str] = mapped_column(db.String(225),nullable=False)
 
     service_tickets: Mapped[List['ServiceTickets']] = db.relationship(secondary='service_mechanics', back_populates='mechanics')
 
