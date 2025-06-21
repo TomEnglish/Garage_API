@@ -42,6 +42,7 @@ def get_inventory_list():
 #UPDATE SPECIFIC EMPLOYEE/MECHANIC
 @inventory_db.route("/<int:inventory_id>", methods=['PUT'])
 def update_inventory(inventory_id):
+    print(f"DEBUG: update_inventory called for ID: {inventory_id}, Method: {request.method}") # Add this line
     item = db.session.get(Inventory, inventory_id)
 
     if not Inventory:

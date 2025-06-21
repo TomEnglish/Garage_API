@@ -48,6 +48,24 @@ def assign_mechanic(ticket_id, mechanic_id):
     message = f"Mechanic {mechanic.name} (ID: {mechanic.id}) assigned to Ticket ID: {ticket.id}"
     return jsonify(message=message, ticket=serialized_ticket), 200
  
+# PUT '/<ticket_id>/remove-mechanic/<mechanic-id>: Adds a relationship between a service ticket and the mechanics. (Reminder: use your relationship attributes! They allow you the treat the relationship like a list, able to append a Mechanic to the mechanics list).
+@tickets_db.route("/<ticket_id>/remove-mechanic/<mechanic_id>", methods=['PUT'])
+def remove_mechanic(ticket_id, mechanic_id):
+    ticket = db.session.get(ServiceTickets, ticket_id)
+    mechanic = db.session.get(Mechanics, mechanic_id)
+
+    if not ticket:
+        return jsonify({"error": "Ticket not found."}), 404
+    
+    if not mechanic:
+        return jsonify({"error": "Mechanic not found."}), 404
+    
+    ticket.mechanics.remove(mechanic)
+    db.session.commit()
+    serialized_ticket = serviceticket_schema.dump(ticket)
+    message = f"Mechanic {mechanic.name} (ID: {mechanic.id}) assigned to Ticket ID: {ticket.id}"
+    return jsonify(message=message, ticket=serialized_ticket), 200
+
 
 # GET '/': Retrieves all service tickets.
 
